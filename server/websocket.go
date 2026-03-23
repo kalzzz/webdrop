@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"log"
+	"net"
 	"net/http"
 	"sync"
 
@@ -19,9 +20,10 @@ type DeviceHub struct {
 
 // Client represents a single WebSocket client connection.
 type Client struct {
-	ID   string
-	Name string
-	WS   WebSocketConn
+	ID    string // 设备唯一 ID
+	Name  string // 设备名称（从 UserAgent 推断）
+	LanIP string // WebSocket TCP 连接对端的 LAN IP
+	WS    WebSocketConn
 }
 
 // NewDeviceHub creates and returns a new DeviceHub instance.
@@ -97,6 +99,10 @@ func (h *DeviceHub) dispatch(client *Client, msg *Message) {
 	case TypeOffer, TypeAnswer, TypeIce,
 		TypeFileOffer, TypeFileAccept, TypeFileReject, TypeFileCancel:
 		if msg.To != "" {
+			// ICE 消息：注入发送者的 LAN IP（用于接收方替换 mDNS 地址）
+			if msg.Type == TypeIce {
+				msg.LANIP = client.LanIP
+			}
 			log.Printf("[dispatch] forwarding %s from=%s to=%s connId=%s", msg.Type, client.ID, msg.To, msg.ConnID)
 			if err := h.SendTo(msg.To, msg); err != nil {
 				log.Printf("[dispatch] forward %s to %s failed: %v", msg.Type, msg.To, err)
@@ -145,12 +151,21 @@ func (h *DeviceHub) readPump(client *Client) {
 	}
 }
 
+// extractLANIP extracts the IP address from a "host:port" string.
+func extractLANIP(remoteAddr string) string {
+	host, _, err := net.SplitHostPort(remoteAddr)
+	if err != nil {
+		return remoteAddr
+	}
+	return host
+}
+
 // Upgrader configures the WebSocket upgrader.
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
 	CheckOrigin: func(r *http.Request) bool {
-		return true // Allow all origins for now
+		return true
 	},
 }
 
@@ -171,7 +186,7 @@ func handleWS(hub *DeviceHub, w http.ResponseWriter, r *http.Request) {
 
 	ws := &wsConnAdapter{Conn: conn}
 
-	// Read registration message: { "type": "register", "from": "<deviceId>", "payload": "<userAgent>" }
+	// Read registration message
 	_, raw, err := ws.ReadMessage()
 	if err != nil {
 		log.Printf("[ws] read registration failed: %v", err)
@@ -180,8 +195,8 @@ func handleWS(hub *DeviceHub, w http.ResponseWriter, r *http.Request) {
 	}
 
 	var regMsg struct {
-		Type    string `json:"type"`
-		From    string `json:"from"`
+		Type    string          `json:"type"`
+		From    string          `json:"from"`
 		Payload json.RawMessage `json:"payload"`
 	}
 	if err := json.Unmarshal(raw, &regMsg); err != nil {
@@ -198,23 +213,23 @@ func handleWS(hub *DeviceHub, w http.ResponseWriter, r *http.Request) {
 	// Parse device name from payload.
 	var payload RegisterPayload
 	if err := json.Unmarshal(regMsg.Payload, &payload); err != nil {
-		// Try parsing as plain string
 		var nameStr string
 		if err := json.Unmarshal(regMsg.Payload, &nameStr); err == nil {
 			payload.DeviceName = nameStr
 		}
 	}
 
-	// Derive a short platform name from userAgent for cleaner display.
 	platform := shortPlatform(payload.DeviceName)
+	lanIP := extractLANIP(r.RemoteAddr)
 
 	client := &Client{
-		ID:   regMsg.From,
-		Name: platform,
-		WS:   ws,
+		ID:    regMsg.From,
+		Name:  platform,
+		LanIP: lanIP,
+		WS:    ws,
 	}
 
-	log.Printf("[ws] client %s connected (%s)", regMsg.From, platform)
+	log.Printf("[ws] client %s connected (%s, lanip=%s)", regMsg.From, platform, lanIP)
 	hub.Register <- client
 	defer func() { hub.Unregister <- client.ID }()
 

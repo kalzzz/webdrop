@@ -353,25 +353,46 @@ async function handleAnswer(msg) {
 }
 
 async function handleIce(msg) {
-    const { connId, payload } = msg;
-    console.log('[handleIce] connId=', connId, 'candidate present=', !!payload.candidate);
+    const { connId, payload, lan_ip } = msg;
+
+    let candidateStr = payload.candidate;
+
+    // 若存在 lan_ip 且 candidate 中包含 .local，替换 mDNS 地址
+    if (lan_ip && candidateStr && candidateStr.includes('.local')) {
+        candidateStr = replaceMDNSWithLANIP(candidateStr, lan_ip);
+        console.log('[handleIce] mDNS replaced:', candidateStr.substring(0, 80) + '...');
+    }
+
+    // Build the ICE candidate object (may have been modified)
+    const iceCandidateObj = {
+        candidate: candidateStr,
+        sdpMid: payload.sdpMid,
+        sdpMLineIndex: payload.sdpMLineIndex
+    };
+
     let pc = state.peerConnections.get(connId);
     if (!pc) {
-        console.warn('[handleIce] no PC for connId=', connId, '— queueing candidate');
         if (!state.pendingCandidates.has(connId)) state.pendingCandidates.set(connId, []);
-        state.pendingCandidates.get(connId).push(payload);
+        state.pendingCandidates.get(connId).push(iceCandidateObj);
         return;
     }
-    if (!payload.candidate) return;
+    if (!iceCandidateObj.candidate) return;
     if (!pc.remoteDescription) {
-        console.warn('[handleIce] remote desc null, queueing for', connId);
         if (!state.pendingCandidates.has(connId)) state.pendingCandidates.set(connId, []);
-        state.pendingCandidates.get(connId).push(payload);
+        state.pendingCandidates.get(connId).push(iceCandidateObj);
         return;
     }
-    console.log('[handleIce] adding candidate for connId=', connId);
-    await pc.addIceCandidate(new RTCIceCandidate(payload));
-    console.log('[handleIce] candidate added OK');
+    await pc.addIceCandidate(new RTCIceCandidate(iceCandidateObj));
+}
+
+function replaceMDNSWithLANIP(candidateStr, lanIP) {
+    const parts = candidateStr.split(' ');
+    for (const part of parts) {
+        if (part.includes('.local')) {
+            return candidateStr.replace(part, lanIP);
+        }
+    }
+    return candidateStr;
 }
 
 function createPC(connId) {

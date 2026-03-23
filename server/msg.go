@@ -26,6 +26,7 @@ type Message struct {
 	From    string          `json:"from,omitempty"`
 	To      string          `json:"to,omitempty"`
 	ConnID  string          `json:"connId,omitempty"`
+	LANIP   string          `json:"lan_ip,omitempty"` // Server 注入：发送者的 LAN IP（用于 mDNS 替换）
 	Payload json.RawMessage `json:"payload,omitempty"`
 }
 
@@ -54,8 +55,8 @@ type RegisteredPayload struct {
 
 // DeviceJoinedPayload is the payload for the DeviceJoined message.
 type DeviceJoinedPayload struct {
-	ID       string `json:"id"`
-	Payload  string `json:"payload"`
+	ID      string `json:"id"`
+	Payload string `json:"payload"`
 }
 
 // DeviceLeftPayload is just the device ID string.
@@ -66,9 +67,11 @@ type SDPData struct {
 	SDP string `json:"sdp"`
 }
 
-// ICEData holds ICE candidate data.
+// ICEData holds ICE candidate data. Does NOT contain LANIP — LANIP is at Message top level.
 type ICEData struct {
-	Candidate string `json:"candidate"`
+	Candidate   string `json:"candidate"`
+	SDPMid      string `json:"sdpMid"`
+	SDPMLineIndex int  `json:"sdpMLineIndex"`
 }
 
 // FileOfferPayload holds the v2head file metadata.
