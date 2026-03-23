@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head><title>WebRTC ICE Test</title></head>
+<body>
+<h2>WebRTC ICE 候选收集测试</h2>
+<button onclick="testICE()">测试 ICE 候选收集</button>
+<pre id="output" style="background:#f0f0f0;padding:10px;white-space:pre-wrap;max-height:400px;overflow:auto"></pre>
+<script>
+const out = document.getElementById('output');
+function log(msg) { out.textContent += msg + '\n'; }
+
+async function testICE() {
+    log('=== 测试开始 ===');
+    log('navigator.userAgent: ' + navigator.userAgent);
+    
+    // 测试1: 完全不设置 iceServers
+    log('\n--- 测试1: new RTCPeerConnection() ---');
+    const pc1 = new RTCPeerConnection();
+    log('iceServers: ' + JSON.stringify(pc1.getConfiguration().iceServers));
+    log('iceTransportPolicy: ' + pc1.getConfiguration().iceTransportPolicy);
+    
+    const offer1 = await pc1.createOffer();
+    log('SDP (offer1) 前200字符:');
+    log(offer1.sdp.split('\n').slice(0,10).join('\n'));
+    
+    await pc1.setLocalDescription(offer1);
+    
+    // 等待1秒看候选
+    await new Promise(r => setTimeout(r, 1000));
+    
+    const cands1 = pc1.getLocalStreams();
+    log('local streams: ' + cands1.length);
+    
+    // 检查ICE状态
+    log('ICE connectionState: ' + pc1.iceConnectionState);
+    log('ICE gatheringState: ' + pc1.iceGatheringState);
+    
+    // 监听候选事件
+    let candCount1 = 0;
+    pc1.onicecandidate = e => {
+        if (e.candidate) {
+            candCount1++;
+            log('候选' + candCount1 + ': ' + JSON.stringify(e.candidate).substring(0, 100));
+        } else {
+            log('候选收集完成！共 ' + candCount1 + ' 个');
+        }
+    };
+    
+    await new Promise(r => setTimeout(r, 3000));
+    
+    // 测试2: 用空数组
+    log('\n--- 测试2: new RTCPeerConnection({iceServers:[]}) ---');
+    const pc2 = new RTCPeerConnection({iceServers: []});
+    log('iceServers: ' + JSON.stringify(pc2.getConfiguration().iceServers));
+    
+    const offer2 = await pc2.createOffer();
+    await pc2.setLocalDescription(offer2);
+    
+    let candCount2 = 0;
+    pc2.onicecandidate = e => {
+        if (e.candidate) {
+            candCount2++;
+            log('候选' + candCount2 + ': ' + JSON.stringify(e.candidate).substring(0, 100));
+        } else {
+            log('候选收集完成！共 ' + candCount2 + ' 个');
+        }
+    };
+    
+    await new Promise(r => setTimeout(r, 3000));
+    
+    log('\n=== 测试完成 ===');
+    log('测试1 (undefined) 候选数: ' + candCount1);
+    log('测试2 ([]) 候选数: ' + candCount2);
+}
+</script>
+</body>
+</html>

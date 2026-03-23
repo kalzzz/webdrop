@@ -1,0 +1,786 @@
+/* ============================================
+   WebDrop - Clean Modern Styles
+   ============================================ */
+
+:root {
+    /* Colors */
+    --color-bg: #f5f7fa;
+    --color-surface: #ffffff;
+    --color-border: #e2e8f0;
+    --color-text-primary: #1a202c;
+    --color-text-secondary: #718096;
+    --color-text-muted: #a0aec0;
+    --color-primary: #3182ce;
+    --color-primary-hover: #2b6cb0;
+    --color-primary-light: #ebf8ff;
+    --color-secondary: #718096;
+    --color-secondary-hover: #4a5568;
+    --color-success: #38a169;
+    --color-success-light: #f0fff4;
+    --color-danger: #e53e3e;
+    --color-danger-light: #fff5f5;
+    --color-warning: #d69e2e;
+    --color-status-online: #38a169;
+    --color-status-offline: #a0aec0;
+
+    /* Layout */
+    --sidebar-width: 280px;
+    --header-height: 60px;
+    --border-radius: 8px;
+    --border-radius-lg: 12px;
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.15);
+
+    /* Transitions */
+    --transition-fast: 150ms ease;
+    --transition-normal: 250ms ease;
+}
+
+/* ============================================
+   Reset & Base
+   ============================================ */
+
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html, body {
+    height: 100%;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--color-text-primary);
+    background-color: var(--color-bg);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* ============================================
+   App Container
+   ============================================ */
+
+.app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* ============================================
+   Header
+   ============================================ */
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: var(--header-height);
+    padding: 0 24px;
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+    flex-shrink: 0;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.app-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--color-text-primary);
+    letter-spacing: -0.5px;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.device-name {
+    font-size: 14px;
+    color: var(--color-text-secondary);
+    font-weight: 500;
+}
+
+.connection-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    background: var(--color-bg);
+    border-radius: 20px;
+}
+
+.status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.status-dot.online {
+    background-color: var(--color-status-online);
+    box-shadow: 0 0 0 3px rgba(56, 161, 105, 0.2);
+}
+
+.status-dot.offline {
+    background-color: var(--color-status-offline);
+}
+
+.status-text {
+    font-size: 13px;
+    color: var(--color-text-secondary);
+}
+
+/* ============================================
+   Main Content - Two Column Layout
+   ============================================ */
+
+.main-content {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* ============================================
+   Sidebar
+   ============================================ */
+
+.sidebar {
+    width: var(--sidebar-width);
+    display: flex;
+    flex-direction: column;
+    background: var(--color-surface);
+    border-right: 1px solid var(--color-border);
+    flex-shrink: 0;
+    overflow-y: auto;
+}
+
+.section-title {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--color-text-muted);
+    margin-bottom: 12px;
+}
+
+/* Devices Section */
+.devices-section {
+    padding: 20px;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.devices-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.devices-empty {
+    text-align: center;
+    padding: 20px;
+    color: var(--color-text-muted);
+    font-size: 13px;
+}
+
+.device-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: var(--color-bg);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    border: 2px solid transparent;
+}
+
+.device-item:hover {
+    background: var(--color-primary-light);
+}
+
+.device-item.selected {
+    border-color: var(--color-primary);
+    background: var(--color-primary-light);
+}
+
+.device-item.offline {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.device-icon {
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+.device-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.device-name-text {
+    font-weight: 500;
+    color: var(--color-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.device-status {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--color-text-secondary);
+}
+
+.device-status .status-dot {
+    width: 8px;
+    height: 8px;
+}
+
+.device-status .status-dot.online {
+    background-color: var(--color-status-online);
+    box-shadow: 0 0 0 2px rgba(56, 161, 105, 0.2);
+}
+
+.device-status .status-dot.offline {
+    background-color: var(--color-status-offline);
+}
+
+/* File Selection Section */
+.file-selection {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex: 1;
+}
+
+.selected-files {
+    min-height: 80px;
+    max-height: 200px;
+    overflow-y: auto;
+    background: var(--color-bg);
+    border-radius: var(--border-radius);
+    padding: 8px;
+}
+
+.files-empty {
+    text-align: center;
+    padding: 20px;
+    color: var(--color-text-muted);
+    font-size: 13px;
+}
+
+.file-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    background: var(--color-surface);
+    border-radius: 6px;
+    margin-bottom: 4px;
+}
+
+.file-item:last-child {
+    margin-bottom: 0;
+}
+
+.file-item-icon {
+    font-size: 16px;
+    flex-shrink: 0;
+}
+
+.file-item-name {
+    flex: 1;
+    font-size: 13px;
+    color: var(--color-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.file-item-size {
+    font-size: 12px;
+    color: var(--color-text-muted);
+    flex-shrink: 0;
+}
+
+.file-item-remove {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--color-text-muted);
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: all var(--transition-fast);
+}
+
+.file-item-remove:hover {
+    background: var(--color-danger-light);
+    color: var(--color-danger);
+}
+
+.file-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.file-btn {
+    flex: 1;
+    text-align: center;
+}
+
+/* ============================================
+   Buttons
+   ============================================ */
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 16px;
+    font-size: 14px;
+    font-weight: 500;
+    border: none;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    text-decoration: none;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-primary {
+    background: var(--color-primary);
+    color: #ffffff;
+}
+
+.btn-primary:hover:not(:disabled) {
+    background: var(--color-primary-hover);
+}
+
+.btn-secondary {
+    background: var(--color-bg);
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-border);
+}
+
+.btn-secondary:hover:not(:disabled) {
+    background: var(--color-border);
+}
+
+.btn-danger {
+    background: var(--color-danger);
+    color: #ffffff;
+}
+
+.btn-danger:hover:not(:disabled) {
+    background: #c53030;
+}
+
+.send-btn {
+    width: 100%;
+    margin-top: auto;
+}
+
+/* ============================================
+   Transfer Panel
+   ============================================ */
+
+.transfer-panel {
+    flex: 1;
+    padding: 24px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.transfer-section {
+    background: var(--color-surface);
+    border-radius: var(--border-radius-lg);
+    padding: 20px;
+    box-shadow: var(--shadow-sm);
+}
+
+.transfer-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.transfer-empty {
+    text-align: center;
+    padding: 24px;
+    color: var(--color-text-muted);
+    font-size: 13px;
+}
+
+.transfer-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 16px;
+    background: var(--color-bg);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--color-border);
+}
+
+.transfer-item-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.transfer-icon {
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+.transfer-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.transfer-name {
+    font-weight: 500;
+    color: var(--color-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.transfer-meta {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.transfer-direction {
+    color: var(--color-primary);
+    font-weight: 500;
+}
+
+.transfer-direction.incoming {
+    color: var(--color-success);
+}
+
+.transfer-progress-bar {
+    height: 6px;
+    background: var(--color-border);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.transfer-progress-fill {
+    height: 100%;
+    background: var(--color-primary);
+    border-radius: 3px;
+    transition: width var(--transition-fast);
+}
+
+.transfer-progress-fill.complete {
+    background: var(--color-success);
+}
+
+.transfer-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.transfer-progress-text {
+    font-size: 13px;
+    color: var(--color-text-secondary);
+}
+
+.transfer-speed {
+    font-size: 12px;
+    color: var(--color-text-muted);
+}
+
+.transfer-actions {
+    display: flex;
+    gap: 8px;
+}
+
+/* Pending Item */
+.pending-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    background: var(--color-bg);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--color-border);
+}
+
+.pending-item .transfer-icon {
+    font-size: 32px;
+}
+
+.pending-item .transfer-info {
+    flex: 1;
+}
+
+.pending-item .transfer-info .transfer-name {
+    font-size: 15px;
+}
+
+.pending-item-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.pending-item-actions .btn {
+    padding: 8px 16px;
+    font-size: 13px;
+}
+
+/* History Item */
+.history-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: var(--color-bg);
+    border-radius: var(--border-radius);
+}
+
+.history-item .transfer-icon {
+    font-size: 20px;
+}
+
+.history-status {
+    font-size: 14px;
+}
+
+.history-status.complete {
+    color: var(--color-success);
+}
+
+.history-status.failed {
+    color: var(--color-danger);
+}
+
+/* ============================================
+   Modal
+   ============================================ */
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+}
+
+.modal-overlay[hidden] {
+    display: none;
+}
+
+.modal {
+    background: var(--color-surface);
+    border-radius: var(--border-radius-lg);
+    width: 100%;
+    max-width: 400px;
+    box-shadow: var(--shadow-lg);
+    animation: modalIn 0.2s ease;
+}
+
+@keyframes modalIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.modal-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--color-text-primary);
+}
+
+.modal-timer {
+    background: var(--color-bg);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+}
+
+.modal-timer.warning {
+    background: var(--color-danger-light);
+    color: var(--color-danger);
+}
+
+.modal-body {
+    padding: 32px 24px;
+    text-align: center;
+}
+
+.modal-file-icon {
+    font-size: 64px;
+    margin-bottom: 16px;
+}
+
+.modal-file-name {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin-bottom: 8px;
+    word-break: break-all;
+}
+
+.modal-file-size {
+    font-size: 14px;
+    color: var(--color-text-secondary);
+    margin-bottom: 8px;
+}
+
+.modal-file-from {
+    font-size: 13px;
+    color: var(--color-text-muted);
+}
+
+.modal-footer {
+    display: flex;
+    gap: 12px;
+    padding: 20px 24px;
+    border-top: 1px solid var(--color-border);
+}
+
+.modal-footer .btn {
+    flex: 1;
+}
+
+/* ============================================
+   Responsive Design
+   ============================================ */
+
+@media (max-width: 768px) {
+    :root {
+        --sidebar-width: 100%;
+    }
+
+    .main-content {
+        flex-direction: column;
+    }
+
+    .sidebar {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid var(--color-border);
+        max-height: 50vh;
+    }
+
+    .transfer-panel {
+        flex: 1;
+        min-height: 0;
+    }
+
+    .header {
+        padding: 0 16px;
+    }
+
+    .device-name {
+        display: none;
+    }
+}
+
+@media (max-width: 480px) {
+    .file-buttons {
+        flex-direction: column;
+    }
+
+    .modal-footer {
+        flex-direction: column;
+    }
+
+    .pending-item {
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+    }
+
+    .pending-item-actions {
+        justify-content: center;
+    }
+}
+
+/* ============================================
+   Scrollbar Styling
+   ============================================ */
+
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--color-bg);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--color-text-muted);
+}
+
+/* ============================================
+   Utilities
+   ============================================ */
+
+[hidden] {
+    display: none !important;
+}
+
+.text-ellipsis {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}

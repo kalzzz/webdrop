@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebDrop</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app">
+        <header class="header">
+            <div class="header-left">
+                <h1 class="app-title">WebDrop</h1>
+            </div>
+            <div class="header-right">
+                <span class="device-name" id="deviceName">未知设备</span>
+                <div class="connection-status" id="connectionStatus">
+                    <span class="status-dot offline"></span>
+                    <span class="status-text">未连接</span>
+                </div>
+            </div>
+        </header>
+        <main class="main-content">
+            <aside class="sidebar">
+                <section class="devices-section">
+                    <h2 class="section-title">已连接设备</h2>
+                    <div class="devices-list" id="devicesList">
+                        <div class="devices-empty">正在搜索设备...</div>
+                    </div>
+                </section>
+                <section class="file-selection">
+                    <h2 class="section-title">发送文件</h2>
+                    <div class="selected-files" id="selectedFiles">
+                        <div class="files-empty">未选择文件</div>
+                    </div>
+                    <div class="file-buttons">
+                        <label class="btn btn-secondary file-btn">
+                            <span>选择文件</span>
+                            <input type="file" id="fileInput" multiple hidden>
+                        </label>
+                        <label class="btn btn-secondary file-btn">
+                            <span>选择文件夹</span>
+                            <input type="file" id="folderInput" webkitdirectory multiple hidden>
+                        </label>
+                    </div>
+                    <button class="btn btn-primary send-btn" id="sendBtn" disabled>发送至选中设备</button>
+                </section>
+            </aside>
+            <section class="transfer-panel">
+                <div class="transfer-section">
+                    <h2 class="section-title">正在传输</h2>
+                    <div class="transfer-list" id="activeTransfers">
+                        <div class="transfer-empty">暂无传输任务</div>
+                    </div>
+                </div>
+                <div class="transfer-section">
+                    <h2 class="section-title">待接收</h2>
+                    <div class="transfer-list" id="pendingReceives">
+                        <div class="transfer-empty">没有待接收的文件</div>
+                    </div>
+                </div>
+                <div class="transfer-section">
+                    <h2 class="section-title">传输历史</h2>
+                    <div class="transfer-list" id="transferHistory">
+                        <div class="transfer-empty">暂无传输记录</div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+    <div class="modal-overlay" id="pendingModal" hidden>
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">收到文件</h3>
+                <span class="modal-timer" id="modalTimer">60</span>
+            </div>
+            <div class="modal-body">
+                <div class="modal-file-icon">📄</div>
+                <div class="modal-file-name" id="modalFileName">filename</div>
+                <div class="modal-file-size" id="modalFileSize">0 MB</div>
+                <div class="modal-file-from">来自: <span id="modalFileFrom">未知设备</span></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="rejectBtn">拒绝</button>
+                <button class="btn btn-primary" id="acceptBtn">接收</button>
+            </div>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
