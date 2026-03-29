@@ -153,13 +153,13 @@ webdrop/
 ```
 ┌──────────────────────────────────────────────────────────────┐
 │                     应用层：文件传输协议（Binary V2）          │
-│  V2Head → Block × N → End                                    │
+│  V2Head → Block × N → (接收端 MD5 校验) → FILE_RECEIVED     │
 ├──────────────────────────────────────────────────────────────┤
 │                    传输层：WebRTC DataChannel                  │
-│  可靠传输，ordered:false + 无重传                             │
+│  可靠传输，ordered:true，SCTP 自动重传                        │
 ├──────────────────────────────────────────────────────────────┤
-│                    网络层：UDP + SCTP / mDNS替换               │
-│  WebRTC 底层                                                     │
+│                    网络层：UDP + SCTP                          │
+│  WebRTC 底层                                                  │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -174,8 +174,8 @@ webdrop/
 | N+4 | 4 | fileSize_hi | 文件大小高 32 位 |
 | N+8 | 4 | fileSize_lo | 文件大小低 32 位 |
 | N+12 | 4 | blocks | 总块数 = ceil(fileSize / 16KB) |
-| N+16 | 16 | MD5 | 文件 MD5 校验值 |
-| N+32 | 4 | crc32 | CRC32-C 校验（不包含 CRC 自身）|
+| N+16 | 16 | MD5 | 文件 MD5 校验值（发送方预计算） |
+| N+32 | 4 | crc32 | CRC32-C 校验（仅 V2Head 自身，不含块数据）|
 
 #### Block（数据块）
 
@@ -183,16 +183,16 @@ webdrop/
 |------|------|------|------|
 | 0 | 1 | type = 0x01 | 消息类型 |
 | 1 | 4 | blockIdx | 块索引（big-endian uint32，从 0 开始）|
-| 5 | 4 | size | 数据大小（字节） |
-| 9 | 4 | crc32 | CRC32-C 校验值 |
-| 13 | M | data | 原始数据（通常 16KB）|
+| 5 | 4 | size | 数据大小（字节，最后一块可能 < 16KB）|
+| 9 | M | data | 原始数据 |
 
-#### End（传输结束）
+#### FILE_RECEIVED（接收端 ACK）
 
 | 偏移 | 大小 | 字段 | 说明 |
 |------|------|------|------|
-| 0 | 1 | type = 0x04 | 消息类型 |
-| 1 | 16 | MD5 | 接收方计算的文件 MD5，与 V2Head 中的值比对 |
+| 0 | 1 | type = 0x05 | 消息类型 |
+| 1 | 1 | ok | 1 = 成功，0 = 失败 |
+| 2 | 16 | MD5 | 接收端计算的文件 MD5 |
 
 ### 4.3 分块策略
 
@@ -200,15 +200,35 @@ webdrop/
 |------|-----|------|
 | ChunkSize | 16 KB | 每块数据大小（解决 SCTP 单消息 16KB 限制） |
 | 分块数 | ceil(fileSize / 16KB) | 根据文件大小计算 |
-| CRC32 算法 | CRC32-C (Castagnoli) | 硬件加速，SSE4.2 可达 3-5 GB/s |
-| 并行方式 | 每个 RTCPeerConnection 独立传输一个文件 | 多文件并行用多连接 |
+| CRC32 算法 | CRC32-C (Castagnoli) | 仅用于 V2Head 校验，Block 不校验 |
 
 ### 4.4 传输语义
 
-- **ordered: false** — 允许乱序交付，单块丢失不阻塞后续块
-- **maxRetransmits: 0** — 禁用 SCTP 重传，丢包由应用层处理
-- **CRC32 校验失败** — 丢弃该块，传输失败（简化版）
-- **MD5 最终校验** — 接收完毕后计算 MD5，与 V2Head 中的值比对
+- **ordered: true** — 保证块按序交付，SCTP 自动处理丢包重传
+- **maxRetransmits: 3** — 丢包最多重传 3 次，超过则终止该 DataChannel
+- **无 END 标志** — 接收端根据 `blocks.size === totalBlocks` 判断收齐
+- **MD5 + ACK 双向确认** — 接收端校验完整后主动发 FILE_RECEIVED ACK，发送端收到 ACK 才算完成
+- **ACK 超时** — 30 秒未收到 ACK，强制标记失败
+
+### 4.5 传输流程
+
+```
+Sender                                                      Receiver
+  |                                                            |
+  |-- V2Head (expectedHash) --------------------------------->|
+  |-- BLOCK 0 ----------------------------------------------->|
+  |-- BLOCK 1 ----------------------------------------------->|
+  ...                                                          ...
+  |-- BLOCK N ----------------------------------------------->|
+  |                                                            | (收齐所有块)
+  |                                                            | (MD5 校验)
+  |<---------------------- FILE_RECEIVED (ok, hash) ----------|
+  |                                                            |
+  v                                                            v
+completeXfer(true)                                      downloadBlob()
+```
+
+**关键保证**：`ordered: true` 下，BLOCK N 必须等 BLOCK 0~(N-1) 全部交付后才能交付应用层，因此接收端收到 BLOCK N 时，前面的块必然已到齐。FILE_RECEIVED ACK 通过独立 DataChannel 发送，确保双向确认。
 
 ---
 
@@ -307,24 +327,37 @@ A 选择文件，发给 B：
 
 ## 6. WebRTC 实现
 
-### 6.1 多连接架构
+### 6.1 单连接多 DataChannel 架构
 
 ```
-每个文件传输 = 1 个独立 RTCPeerConnection
+每个目标设备 = 1 个 RTCPeerConnection
+每个文件 = 1 个独立 DataChannel
 
-Browser A 同时给 B 发文件 1，给 C 发文件 2：
+Browser A 同时给 B 发文件 1、文件 2：
 
-  A ── RTCPeerConnection 1 ──> B  （文件 1，connId: A-B-xxx）
-  A ── RTCPeerConnection 2 ──> C  （文件 2，connId: A-C-xxx）
+  A ── RTCPeerConnection (A-B) ──> B
+         │
+         ├── DC1 (file:文件1:size)  ──>  Stream 0
+         └── DC2 (file:文件2:size)  ──>  Stream 1
 
-Browser B 同时给 A 发文件 3：
+Browser A 同时给 C 发文件 3：
 
-  B ── RTCPeerConnection 3 ──> A  （文件 3，connId: B-A-yyy）
+  A ── RTCPeerConnection (A-C) ──> C
+         │
+         └── DC3 (file:文件3:size)  ──>  Stream 0
 ```
 
-**为什么不用单连接多 DataChannel**：SCTP 层队头阻塞，多 DataChannel 共享同一个 CWND，无法真正并行。
+**为什么用单连接多 DataChannel**：每个 DataChannel 映射到独立 SCTP Stream，HOL 阻塞仅影响同一 Stream，不同文件的 DC 互不影响。
 
-### 6.2 ICE 候选收集与发送
+### 6.2 多 DC 并发的隔离性
+
+| 事件 | 影响范围 |
+|------|----------|
+| DC1 丢包 | 只阻塞 DC1（Stream 0），DC2、DC3 完全不受影响 |
+| DC1 传输完成 | DC2、DC3 继续传输，不受影响 |
+| 同 PC 多 DC 带宽争抢 | 正常拥塞控制，不影响单个文件完整性 |
+
+### 6.3 ICE 候选收集与发送
 
 ```javascript
 const pc = new RTCPeerConnection({
@@ -336,7 +369,10 @@ const pc = new RTCPeerConnection({
 });
 
 // 重要：createDataChannel 必须在 createOffer 之前
-const dc = pc.createDataChannel('ft', { ordered: false });
+const dc = pc.createDataChannel(dcLabel, {
+    ordered: true,
+    maxRetransmits: 3
+});
 
 const offer = await pc.createOffer();
 await pc.setLocalDescription(offer);
@@ -358,16 +394,16 @@ pc.onicecandidate = e => {
 };
 ```
 
-### 6.3 DataChannel 配置
+### 6.4 DataChannel 配置
 
 ```javascript
-const dc = pc.createDataChannel('ft', {
-    ordered: false,           // 不按序交付，丢包不阻塞
-    maxRetransmits: 0         // 不重传，应用层 CRC 补偿
+const dc = pc.createDataChannel(dcLabel, {
+    ordered: true,           // 保证块按序交付，SCTP 自动重传
+    maxRetransmits: 3        // 丢包最多重传 3 次
 });
 ```
 
-### 6.4 ICE 连接状态管理
+### 6.5 ICE 连接状态管理
 
 ```javascript
 pc.oniceconnectionstatechange = () => {
@@ -377,7 +413,7 @@ pc.oniceconnectionstatechange = () => {
 };
 ```
 
-### 6.5 connId 路由
+### 6.6 connId 路由
 
 WebRTC offer/answer 的 connId 方向不同，需要双向查找：
 
@@ -529,9 +565,11 @@ const state = {
          ▼
     handleFileAccept()             收到接收方同意
          │
-         ├─ DC open → sendV2Head() → sendBlock() × N → sendEnd()
+         ├─ DC open → sendV2Head() → sendBlock() × N
+         │                          (发完切换 waitingAck 状态)
          │
          ▼
+    handleFileReceived()           收到 ACK（MD5 匹配）→ completeXfer
     文件数据通过 DataChannel P2P 传输
 ```
 
@@ -569,7 +607,7 @@ handleBinary()            收到二进制数据
     │
     ├─ u[0] === 0x00 → recvV2Head()   解析文件头
     ├─ u[0] === 0x01 → recvBlock()     接收数据块
-    └─ u[0] === 0x04 → recvEnd()        传输结束，MD5 校验
+    └─ u[0] === 0x05 → handleFileReceived() 收到 ACK（发送端）
 ```
 
 ### 8.4 mDNS 地址替换
@@ -652,6 +690,8 @@ async function handleIce(msg) {
 | `ch.send()` 抛出 OperationError | SCTP 单消息 16KB 限制，4MB 分块过大 | `CHUNK_SIZE` 4MB → 16KB |
 | `>>>` 优先级 bug | `>>> 0` 优先级高于 `/` | 加括号 `(Math.floor(...)) >>> 0` |
 | 文件在对方同意前就开始发 | DC open 后直接发，未检查 `file_accept` | 引入 `transferAccepted` 标记双重检查 |
+| 传输永远无法完成（END 抢跑）| `ordered: false` 时 END 先于最后几块到达接收端 | 改用 `ordered: true`，接收端通过块计数判断收齐，MD5+ACK 确认完整性 |
+| 文件部分数据丢失 | `bufferedAmount === 0` 只代表 SCTP 队列空，不代表数据到应用层 | 移除 END 标志，接收端主动发 ACK，发送端等待 ACK 才算完成 |
 
 ---
 

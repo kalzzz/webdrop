@@ -71,18 +71,16 @@
     <div class="modal-overlay" id="pendingModal" hidden>
         <div class="modal">
             <div class="modal-header">
-                <h3 class="modal-title">收到文件</h3>
+                <h3 class="modal-title">收到 <span id="modalFileCount">0</span> 个文件</h3>
                 <span class="modal-timer" id="modalTimer">60</span>
             </div>
             <div class="modal-body">
-                <div class="modal-file-icon">📄</div>
-                <div class="modal-file-name" id="modalFileName">filename</div>
-                <div class="modal-file-size" id="modalFileSize">0 MB</div>
                 <div class="modal-file-from">来自: <span id="modalFileFrom">未知设备</span></div>
+                <div class="modal-file-list" id="modalFileList"></div>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" id="rejectBtn">拒绝</button>
-                <button class="btn btn-primary" id="acceptBtn">接收</button>
+                <button class="btn btn-primary" id="acceptBtn">全部接收</button>
             </div>
         </div>
     </div>

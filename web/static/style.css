@@ -681,6 +681,48 @@ body {
 .modal-file-from {
     font-size: 13px;
     color: var(--color-text-muted);
+    margin-bottom: 12px;
+}
+
+.modal-file-list {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+}
+
+.modal-file-list-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--color-border);
+    font-size: 13px;
+}
+
+.modal-file-list-item:last-child {
+    border-bottom: none;
+}
+
+.modal-file-list-item .file-icon {
+    font-size: 20px;
+}
+
+.modal-file-list-item .file-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.modal-file-list-item .file-name {
+    color: var(--color-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.modal-file-list-item .file-size {
+    color: var(--color-text-muted);
+    font-size: 12px;
 }
 
 .modal-footer {

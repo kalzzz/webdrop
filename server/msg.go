@@ -74,9 +74,28 @@ type ICEData struct {
 	SDPMLineIndex int  `json:"sdpMLineIndex"`
 }
 
-// FileOfferPayload holds the v2head file metadata.
+// FileOfferPayload holds the v2head file metadata (旧版单文件格式).
 type FileOfferPayload struct {
 	V2Head json.RawMessage `json:"v2head"`
+}
+
+// FileOfferPayloadV2 holds multiple files metadata (新版多文件格式).
+// 格式：{ "files": [{ "name": "...", "size": ..., "blocks": ..., "MD5": "..." }, ...] }
+type FileOfferPayloadV2 struct {
+	Files []FileInfo `json:"files"`
+}
+
+// FileInfo 单个文件信息
+type FileInfo struct {
+	Name   string `json:"name"`
+	Size   uint64 `json:"size"`
+	Blocks uint32 `json:"blocks"`
+	MD5    string `json:"MD5"`
+}
+
+// FileAcceptPayloadV2 file_accept 的 payload（支持多文件）
+type FileAcceptPayloadV2 struct {
+	AcceptedFiles []string `json:"acceptedFiles,omitempty"`
 }
 
 // Encode encodes a message to JSON bytes.
